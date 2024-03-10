@@ -5,6 +5,8 @@ from nacl.exceptions import BadSignatureError
 import urllib.request
 import json
 
+_DISCORD_API_URL = 'https://discord.com/api/v10/'
+
 class DiscordApi:
     def __init__(self, app_id, public_key, bot_token):
         self.app_id = app_id
@@ -33,11 +35,11 @@ class DiscordApi:
         if body:
             req.add_header('Content-Type', 'application/json')
         with urllib.request.urlopen(req) as resp:
-            return resp.read()
+            return json.loads(resp.read())
 
     def register_commands(self, guild=None):
         guild_part = f'/guilds/{guild}' if guild else ''
-        url = f'https://discord.com/api/v10/applications/{self.app_id}{guild_part}/commands'
+        url = _DISCORD_API_URL + f'applications/{self.app_id}{guild_part}/commands'
 
         cmds = {
             'name': 'trophygames',
@@ -70,8 +72,7 @@ class DiscordApi:
         return self._send_request(url, data=cmds)
 
     def list_guilds(self):
-        url = 'https://discord.com/api/v10/users/@me/guilds'
-        return self._send_request(url)
+        return self._send_request(_DISCORD_API_URL + 'users/@me/guilds')
 
 def get_api():
     with open('discord_config.json', 'rb') as f:
@@ -83,8 +84,8 @@ if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
     if cmd == 'register':
         guild_id = int(sys.argv[2]) if len(sys.argv) > 2 else None
-        print(get_api().register_commands(guild_id))
+        print(get_api().register_commands(guild_id), sep='\n')
     elif cmd == 'guilds':
-        print(get_api().list_guilds())
+        print(*get_api().list_guilds(), sep='\n')
     else:
         sys.exit(1)

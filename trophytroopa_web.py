@@ -3,6 +3,7 @@
 from bottle import route, post, request, template, redirect, abort, run
 import trophytroopa_discord
 import ra_api
+import os
 
 # use the two primary RetroAchievements colors to mark the embeds
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
@@ -92,11 +93,15 @@ def _get_ra_api():
         _ra.get_full_gamelist()
     return _ra
 
+_discord = None
 def _get_discord_api():
     global _discord
     if not _discord:
         _discord = trophytroopa_discord.get_api()
     return _discord
+
+# flag for printing debug output
+_verbose = ("VERBOSE" in os.environ)
 
 @route('/trophytroopa')
 @route('/')
@@ -140,6 +145,8 @@ def stats():
 
 @post('/trophytroopa/discord_interaction')
 def discord_interaction():
+    if _verbose:
+        print('discord request:', request.json)
     discord_verify(request)
 
     req_type = request.json['type']
@@ -172,13 +179,16 @@ def discord_cmd_trophygames(cmd):
     allow_hacks = bool(opts.get('hacks', True))
     ra = _get_ra_api()
     embeds = make_discord_embeds(ra, game_count, allow_empty=allow_empty, allow_hacks=allow_hacks)
-    return {
+    response = {
         'type': 4, # CHANNEL_MESSAGE_WITH_SOURCE
         'data': {
             'content': f'Pulled {game_count} random game{"s" if game_count > 1 else ""} (empty: {allow_empty}, hacks: {allow_hacks})',
             'embeds': embeds
         }
     }
+    if _verbose:
+        print('discord response:', response)
+    return response
 
 def get_game_details(ra: ra_api.RetroAchievementsApi, game_id: int) -> dict:
     # request could fail because of rate limiting or other issues, ignore
