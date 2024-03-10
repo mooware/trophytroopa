@@ -327,13 +327,9 @@ class RetroAchievementsApi:
 
 
 def get_api(auth_user=None, auth_key=None):
-    if not auth_user:
-        with open('.ra_api_user', 'rt') as f:
-            auth_user = f.readline().strip()
-    if not auth_key:
-        with open('.ra_api_key', 'rt') as f:
-            auth_key = f.readline().strip()
-    return RetroAchievementsApi(auth_user, auth_key, 'db')
+    with open('ra_config.json', 'rb') as f:
+        cfg = json.load(f)
+    return RetroAchievementsApi(cfg['api_user'], cfg['api_key'], 'db')
 
 if __name__ == '__main__':
     import sys

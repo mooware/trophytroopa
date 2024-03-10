@@ -74,13 +74,9 @@ class DiscordApi:
         return self._send_request(url)
 
 def get_api():
-    with open('.bot_app_id', 'rt') as f:
-        app_id = int(f.readline().strip())
-    with open('.bot_pub_key', 'rt') as f:
-        pub_key = f.readline().strip()
-    with open('.bot_token', 'rt') as f:
-        token = f.readline().strip()
-    return DiscordApi(app_id, pub_key, token)
+    with open('discord_config.json', 'rb') as f:
+        cfg = json.load(f)
+    return DiscordApi(cfg['app_id'], cfg['pub_key'], cfg['bot_token'])
 
 if __name__ == '__main__':
     import sys
