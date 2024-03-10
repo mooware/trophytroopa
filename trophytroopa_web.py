@@ -18,6 +18,7 @@ HTML_INDEX_TEMPLATE = """
     <div>total games: {{len(ra.get_full_gamelist(allow_empty=True))}}</div>
     <div><a href="random">go here for a random game with achievements</a></div>
     <div><a href="any">go here for any random game</a></div>
+    <div><a href="stats">game list stats</a></div>
   </body>
 </html>
 """
@@ -64,9 +65,25 @@ HTML_GAME_TEMPLATE = """
 </html>
 """
 
-_ra = None
-_discord = None
+HTML_STATS_TEMPLATE = """
+<html>
+  <head>
+    <title>TrophyTroopa Stats</title>
+    <style>table, th, td { border: 1px solid; }</style>
+  </head>
+  <body>
+    <table>
+      <thead><th>System</th><th>With Achievements</th><th>All Games</th></thead>
+      <tr><td>Total</td><td>{{nonempty}}</td><td>{{total}}</td></tr>
+%for sysname, (systotal, sysnonempty) in stats:
+      <tr><td>{{sysname}}</td><td>{{sysnonempty}}</td><td>{{systotal}}</td></tr>
+%end
+    </table>
+  </body>
+</html>
+"""
 
+_ra = None
 def _get_ra_api():
     global _ra
     if not _ra:
@@ -113,6 +130,13 @@ def show_random_game(allow_empty: bool):
     game = ra.get_random_games(1, allow_empty=allow_empty)[0]
     details = get_game_details(ra, game['ID'])
     return template(HTML_GAME_TEMPLATE, ra=ra, game=game, details=details)
+
+@route('/trophytroopa/stats')
+def stats():
+    ra = _get_ra_api()
+    table, (total, nonempty) = ra.stats()
+    table = sorted(table.items(), key=lambda row: row[1][1], reverse=True)
+    return template(HTML_STATS_TEMPLATE, stats=table, total=total, nonempty=nonempty)
 
 @post('/trophytroopa/discord_interaction')
 def discord_interaction():

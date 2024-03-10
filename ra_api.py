@@ -294,15 +294,20 @@ class RetroAchievementsApi:
         """return the url of the game with the given id"""
         return self.make_full_url(f'game/{game_id}')
 
-    def stats(self) -> dict:
+    def stats(self):
         """return a dict with total and nonempty game counts per system"""
         result = {}
         games = self.get_full_gamelist(allow_empty=True)
+        all_total = 0
+        all_nonempty = 0
         for game in games:
             key = game['ConsoleName']
             total, nonempty = result.get(key, (0, 0))
-            result[key] = (total + 1, nonempty + int(bool(game['NumAchievements'])))
-        return result
+            is_nonempty = int(bool(game['NumAchievements']))
+            result[key] = (total + 1, nonempty + is_nonempty)
+            all_total += 1
+            all_nonempty += is_nonempty
+        return result, (all_total, all_nonempty)
 
     def update_cache(self):
         temp_cache_dir = self.cache_dir + '.update'
@@ -341,3 +346,9 @@ if __name__ == '__main__':
         print(*api.get_random_games(count, allow_empty=True), sep='\n')
     elif cmd == 'update':
         api.update_cache()
+    elif cmd == 'stats':
+        stats, (total, nonempty) = api.stats()
+        print('System | All Games | Games With Achievements')
+        print('Total |', total, '|', nonempty)
+        for sysname, (systotal, sysnonempty) in stats.items():
+            print(sysname, '|', systotal, '|', sysnonempty)
