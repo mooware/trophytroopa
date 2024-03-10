@@ -186,8 +186,16 @@ class RetroAchievementsApi:
         self.cache_dir = cache_dir
         self.all_games = None
         self.all_nonempty_games = None
+        self.db_timestamp = 0
 
     def _load_db(self):
+        path = os.path.join(self.cache_dir, 'systems.json')
+        if os.path.exists(path):
+            mtime = os.stat(path).st_mtime
+            if mtime == self.db_timestamp:
+                return # already loaded
+            self.db_timestamp = mtime
+        print('reload db')
         self.all_games = []
         self.all_nonempty_games = []
         for system in self.get_systems():
@@ -252,8 +260,7 @@ class RetroAchievementsApi:
 
     def get_full_gamelist(self, allow_empty=False) -> list:
         """get the full list of games with achievements, or of any games if allow_empty=True"""
-        if not self.all_games:
-            self._load_db()
+        self._load_db()
         if allow_empty:
             return self.all_games
         else:
