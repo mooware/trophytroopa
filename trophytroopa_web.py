@@ -8,6 +8,8 @@ import time
 
 # use the two primary RetroAchievements colors to mark the embeds
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
+# unicode codepoints for cross and checkmark, representing false/true
+_BOOL_EMOTE = ['\u274C', '\u2705']
 
 HTML_INDEX_TEMPLATE = """
 <html>
@@ -183,7 +185,7 @@ def discord_cmd_trophygames(cmd):
     response = {
         'type': 4, # CHANNEL_MESSAGE_WITH_SOURCE
         'data': {
-            'content': f'Pulled {game_count} random game{"s" if game_count > 1 else ""} (empty: {allow_empty}, hacks: {allow_hacks})',
+            'content': f'Pulled {game_count} random game{"s" if game_count > 1 else ""} (empty: {_BOOL_EMOTE[allow_empty]}, hacks: {_BOOL_EMOTE[allow_hacks]})',
             'embeds': embeds
         }
     }
