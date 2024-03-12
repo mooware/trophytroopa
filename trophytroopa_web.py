@@ -4,6 +4,7 @@ from bottle import route, post, request, template, redirect, abort, run
 import trophytroopa_discord
 import ra_api
 import os
+import time
 
 # use the two primary RetroAchievements colors to mark the embeds
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
@@ -200,8 +201,15 @@ def get_game_details(ra: ra_api.RetroAchievementsApi, game_id: int) -> dict:
 def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_empty: bool, allow_hacks: bool) -> dict:
     embeds = []
     games = ra.get_random_games(game_count, allow_empty=allow_empty, allow_hacks=allow_hacks)
+    retried = False
     for i, game in enumerate(games):
         details = get_game_details(ra, game['ID'])
+        if not details and not retried:
+            # RA starts rate-limiting after a few requests,
+            # wait once to let it cool down
+            time.sleep(1)
+            retried = True
+            details = get_game_details(ra, game['ID'])
         color = _DISCORD_EMBED_COLORS[i % len(_DISCORD_EMBED_COLORS)]
         embed = make_game_embed(ra, game, details, color)
         embeds.append(embed)

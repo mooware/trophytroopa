@@ -52,7 +52,7 @@ class DiscordApi:
                     'type': 4, # INTEGER
                     'required': False,
                     'min_value': 1,
-                    'max_value': 5 # RetroAchievements quickly rate-limits after ~8 requests
+                    'max_value': 10 # RetroAchievements quickly rate-limits after ~8 requests
                 },
                 {
                     'name': 'empty',
