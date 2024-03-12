@@ -1,13 +1,16 @@
 """TrophyTroopa discord bot functions for admin tasks like registering the bot and commands."""
 
+import sys
+import json
+import urllib.request
 from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
-import urllib.request
-import json
 
 _DISCORD_API_URL = 'https://discord.com/api/v10/'
 
 class DiscordApi:
+    """Some simple functions to interact with the discord bot API, to register commands."""
+
     def __init__(self, app_id, public_key, bot_token):
         self.app_id = app_id
         self.verify_key = VerifyKey(bytes.fromhex(public_key))
@@ -38,6 +41,7 @@ class DiscordApi:
             return json.loads(resp.read())
 
     def register_commands(self, guild=None):
+        """Register the bot commands for the given guild, or globally if no guild specified."""
         guild_part = f'/guilds/{guild}' if guild else ''
         url = _DISCORD_API_URL + f'applications/{self.app_id}{guild_part}/commands'
 
@@ -72,15 +76,17 @@ class DiscordApi:
         return self._send_request(url, data=cmds)
 
     def list_guilds(self):
+        """Request a list of guilds in which the bot is a member."""
         return self._send_request(_DISCORD_API_URL + 'users/@me/guilds')
 
 def get_api():
+    """Create a new DiscordApi instance with configuration from discord_config.json."""
     with open('discord_config.json', 'rb') as f:
         cfg = json.load(f)
     return DiscordApi(cfg['app_id'], cfg['pub_key'], cfg['bot_token'])
 
-if __name__ == '__main__':
-    import sys
+def main():
+    """main entry point if script is called directly."""
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
     if cmd == 'register':
         guild_id = int(sys.argv[2]) if len(sys.argv) > 2 else None
@@ -89,3 +95,6 @@ if __name__ == '__main__':
         print(*get_api().list_guilds(), sep='\n')
     else:
         sys.exit(1)
+
+if __name__ == '__main__':
+    main()

@@ -1,6 +1,8 @@
 """Discord API client for game lists and random games, caches the game lists locally."""
 
 import urllib.request
+import urllib.error
+import sys
 import os
 import json
 import random
@@ -253,10 +255,14 @@ class RetroAchievementsApi:
         # will also return games without achievements
         return self._request('API_GetGameList.php', f'i={sysid}', cache_path=cache_path)
 
-    def get_game_details(self, game_id: int):
+    def get_game_details(self, game_id: int, ignore_error=False):
         """get details for a game, will not be cached"""
         gid = int(game_id)
-        return self._request('API_GetGame.php', f'i={gid}')
+        try:
+            return self._request('API_GetGame.php', f'i={gid}')
+        except urllib.error.HTTPError:
+            if not ignore_error:
+                raise
 
     def get_full_gamelist(self, allow_empty=False) -> list:
         """get the full list of games with achievements, or of any games if allow_empty=True"""
@@ -310,12 +316,13 @@ class RetroAchievementsApi:
         return result, (all_total, all_nonempty)
 
     def update_cache(self):
+        """Download the cached database files again and replace the old database."""
         temp_cache_dir = self.cache_dir + '.update'
         new_db = RetroAchievementsApi(self.auth_user, self.auth_key, temp_cache_dir)
         systems = new_db.get_systems()
-        for sys in systems:
-            games = new_db.get_gamelist(sys['ID'])
-            print('updated system', sys['ID'], sys['Name'], 'has', len(games), 'games')
+        for system in systems:
+            games = new_db.get_gamelist(system['ID'])
+            print('updated system', system['ID'], system['Name'], 'has', len(games), 'games')
             # the RA API has heavy rate limiting, wait between requests
             time.sleep(1)
         new_db._load_db()
@@ -326,13 +333,14 @@ class RetroAchievementsApi:
         self.all_nonempty_games = new_db.all_nonempty_games
 
 
-def get_api(auth_user=None, auth_key=None):
+def get_api():
+    """Create a new RetroAchievementsApi instance with configuration from ra_config.json."""
     with open('ra_config.json', 'rb') as f:
         cfg = json.load(f)
     return RetroAchievementsApi(cfg['api_user'], cfg['api_key'], 'db')
 
-if __name__ == '__main__':
-    import sys
+def main():
+    """main entry point if script is called directly."""
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
     count = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     api = get_api()
@@ -348,3 +356,6 @@ if __name__ == '__main__':
         print('Total |', total, '|', nonempty)
         for sysname, (systotal, sysnonempty) in stats.items():
             print(sysname, '|', systotal, '|', sysnonempty)
+
+if __name__ == '__main__':
+    main()

@@ -1,10 +1,10 @@
 """Web API for TrophyTroopa, handles browsers, discord embeds and discord bot interactions."""
 
+import os
+import time
 from bottle import route, post, request, template, redirect, abort, run
 import trophytroopa_discord
 import ra_api
-import os
-import time
 
 # use the two primary RetroAchievements colors to mark the embeds
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
@@ -87,24 +87,24 @@ HTML_STATS_TEMPLATE = """
 </html>
 """
 
-_ra = None
+_RA = None
 def _get_ra_api():
-    global _ra
-    if not _ra:
-        _ra = ra_api.get_api()
+    global _RA
+    if not _RA:
+        _RA = ra_api.get_api()
         # make sure the list is loaded
-        _ra.get_full_gamelist()
-    return _ra
+        _RA.get_full_gamelist()
+    return _RA
 
-_discord = None
+_DISCORD = None
 def _get_discord_api():
-    global _discord
-    if not _discord:
-        _discord = trophytroopa_discord.get_api()
-    return _discord
+    global _DISCORD
+    if not _DISCORD:
+        _DISCORD = trophytroopa_discord.get_api()
+    return _DISCORD
 
 # flag for printing debug output
-_verbose = ("VERBOSE" in os.environ)
+_VERBOSE = "VERBOSE" in os.environ
 
 @route('/trophytroopa')
 @route('/')
@@ -136,7 +136,7 @@ def any_game_pull():
 def show_random_game(allow_empty: bool):
     ra = _get_ra_api()
     game = ra.get_random_games(1, allow_empty=allow_empty)[0]
-    details = get_game_details(ra, game['ID'])
+    details = ra.get_game_details(game['ID'], ignore_error=True)
     return template(HTML_GAME_TEMPLATE, ra=ra, game=game, details=details)
 
 @route('/trophytroopa/stats')
@@ -148,7 +148,7 @@ def stats():
 
 @post('/trophytroopa/discord_interaction')
 def discord_interaction():
-    if _verbose:
+    if _VERBOSE:
         print('discord request:', request.json)
     discord_verify(request)
 
@@ -164,16 +164,17 @@ def discord_interaction():
     else:
         return abort(400, 'invalid interaction type')
 
-def discord_verify(request):
+def discord_verify(req):
     """Check the request signature as required by Discord for interactions."""
-    signature = request.headers['X-Signature-Ed25519']
-    timestamp = request.headers['X-Signature-Timestamp']
-    data = request.body.read()
+    signature = req.headers['X-Signature-Ed25519']
+    timestamp = req.headers['X-Signature-Timestamp']
+    data = req.body.read()
     discord = _get_discord_api()
     if not discord.verify_signature(data, signature, timestamp):
         abort(401, 'invalid request signature')
 
 def discord_cmd_trophygames(cmd):
+    """Process the discord /trophygames command."""
     opts = {}
     if 'options' in cmd:
         opts = {opt['name']: opt['value'] for opt in cmd['options']}
@@ -189,29 +190,22 @@ def discord_cmd_trophygames(cmd):
             'embeds': embeds
         }
     }
-    if _verbose:
+    if _VERBOSE:
         print('discord response:', response)
     return response
-
-def get_game_details(ra: ra_api.RetroAchievementsApi, game_id: int) -> dict:
-    # request could fail because of rate limiting or other issues, ignore
-    try:
-      return ra.get_game_details(game_id)
-    except Exception:
-      return None
 
 def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_empty: bool, allow_hacks: bool) -> dict:
     embeds = []
     games = ra.get_random_games(game_count, allow_empty=allow_empty, allow_hacks=allow_hacks)
     retried = False
     for i, game in enumerate(games):
-        details = get_game_details(ra, game['ID'])
+        details = ra.get_game_details(game['ID'], ignore_error=True)
         if not details and not retried:
             # RA starts rate-limiting after a few requests,
             # wait once to let it cool down
             time.sleep(1)
             retried = True
-            details = get_game_details(ra, game['ID'])
+            details = ra.get_game_details(game['ID'], ignore_error=True)
         color = _DISCORD_EMBED_COLORS[i % len(_DISCORD_EMBED_COLORS)]
         embed = make_game_embed(ra, game, details, color)
         embeds.append(embed)
