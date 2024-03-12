@@ -281,9 +281,10 @@ class RetroAchievementsApi:
         if not allow_hacks:
             while True:
                 result = [r for r in result if self._HACK_STR not in r['Title']]
-                if len(result) == game_count:
+                if len(result) >= game_count:
                     break
-                more_games = random.sample(games, game_count)
+                missing_count = game_count - len(result)
+                more_games = random.sample(games, missing_count)
                 ids = [r['ID'] for r in result]
                 for g in more_games:
                     if g['ID'] not in ids:
