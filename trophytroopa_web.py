@@ -144,7 +144,7 @@ def show_random_game(allow_empty: bool):
 def stats():
     ra = _get_ra_api()
     table, (total, nonempty) = ra.stats()
-    table = sorted(table.items(), key=lambda row: row[1][1], reverse=True)
+    table = sorted(table.items(), key=lambda row: (row[1][1], row[1][0]), reverse=True)
     return template(HTML_STATS_TEMPLATE, stats=table, total=total, nonempty=nonempty)
 
 @post('/trophytroopa/discord_interaction')
