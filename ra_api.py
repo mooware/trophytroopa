@@ -272,23 +272,49 @@ class RetroAchievementsApi:
         else:
             return self.all_nonempty_games
 
-    def get_random_games(self, game_count=1, allow_empty=False, allow_hacks=True) -> list:
+    def _filter_hacks(self, games: list, get_more, max_iterations=10) -> list:
+        target_count = len(games)
+        for _ in range(max_iterations):
+            # filter the list in-place
+            for i in range(len(games) - 1, -1, -1):
+                g = games[i]
+                if self._HACK_STR in g['Title']:
+                    games.pop(i)
+            if len(games) >= target_count:
+                break
+            # re-fill to desired length
+            missing_count = target_count - len(games)
+            more_games = get_more(missing_count)
+            ids = [r['ID'] for r in games]
+            for g in more_games:
+                if g['ID'] not in ids:
+                    games.append(g)
+
+    def match_system(self, substr: str):
+        """return the system that is the closest match for the given substring"""
+        s = substr.strip().casefold()
+        if not s:
+            return None
+        matches = [x for x in self.get_systems() if s in x['Name'].casefold()]
+        if not matches:
+            return None
+        return min(matches, key=lambda x: len(x['Name']) - len(s))
+
+    def get_random_games(self, game_count=1, allow_empty=False, allow_hacks=True, systems=None) -> list:
         """return random games from the cached game list,
            either only games with achievements, or any game when allow_empty=True"""
         games = self.get_full_gamelist(allow_empty)
-        result = random.sample(games, game_count)
+        if systems:
+            # not sure whether I want to cache these lists
+            games = [g for g in games if g['ConsoleID'] in systems]
+        def sample(count):
+            if len(games) < count:
+                raise Exception(f'game list is shorter than requested count ({len(games)} < {count})')
+            return random.sample(games, count)
+        result = sample(game_count)
         # filter out hacks and then non-unique pulls until we have enough again
         if not allow_hacks:
-            while True:
-                result = [r for r in result if self._HACK_STR not in r['Title']]
-                if len(result) >= game_count:
-                    break
-                missing_count = game_count - len(result)
-                more_games = random.sample(games, missing_count)
-                ids = [r['ID'] for r in result]
-                for g in more_games:
-                    if g['ID'] not in ids:
-                        result.append(g)
+            self._filter_hacks(result, sample)
         return result
 
     def make_full_url(self, relative_url: str) -> str:

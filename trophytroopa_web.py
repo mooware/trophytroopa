@@ -10,6 +10,7 @@ import ra_api
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
 # unicode codepoints for cross and checkmark, representing false/true
 _BOOL_EMOTE = ['\u274C', '\u2705']
+_CONCERNED_EMOTE = '\U0001F622'
 
 HTML_INDEX_TEMPLATE = """
 <html>
@@ -181,22 +182,47 @@ def discord_cmd_trophygames(cmd):
     game_count = int(opts.get('count', 1))
     allow_empty = bool(opts.get('empty', False))
     allow_hacks = bool(opts.get('hacks', True))
+    filter_systems = opts.get('systems')
     ra = _get_ra_api()
-    embeds = make_discord_embeds(ra, game_count, allow_empty=allow_empty, allow_hacks=allow_hacks)
+    try:
+        sysmatches = []
+        if filter_systems:
+            for s in filter_systems.split(','):
+                s = s.strip()
+                if not s:
+                    continue
+                m = ra.match_system(s)
+                if not m:
+                    return make_discord_response(f'No match for system "{s}"')
+                sysmatches.append((s, m))
+
+        embeds = make_discord_embeds(ra, game_count,
+                                     allow_empty=allow_empty, allow_hacks=allow_hacks,
+                                     systems=[m['ID'] for (_, m) in sysmatches])
+        text = f'Pulled {len(embeds)} random game'
+        if len(embeds) > 1:
+            text += 's'
+        text += f' (empty: {_BOOL_EMOTE[allow_empty]}, hacks: {_BOOL_EMOTE[allow_hacks]})'
+        if sysmatches:
+            text += '\nSystem(s): ' + ', '.join([f"{s} = {m['Name']}" for s, m in sysmatches])
+
+        return make_discord_response(text, embeds=embeds)
+    except Exception as ex:
+        return make_discord_response(f'Pull failed {_CONCERNED_EMOTE}: {ex}')
+
+def make_discord_response(text, embeds=None):
     response = {
         'type': 4, # CHANNEL_MESSAGE_WITH_SOURCE
-        'data': {
-            'content': f'Pulled {game_count} random game{"s" if game_count > 1 else ""} (empty: {_BOOL_EMOTE[allow_empty]}, hacks: {_BOOL_EMOTE[allow_hacks]})',
-            'embeds': embeds
-        }
+        'data': { 'content': text }
     }
-    if _VERBOSE:
-        print('discord response:', response)
+    if embeds:
+        response['data']['embeds'] = embeds
     return response
 
-def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_empty: bool, allow_hacks: bool) -> dict:
+def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_empty: bool, allow_hacks: bool, systems: list) -> dict:
     embeds = []
-    games = ra.get_random_games(game_count, allow_empty=allow_empty, allow_hacks=allow_hacks)
+    games = ra.get_random_games(game_count, allow_empty=allow_empty,
+                                allow_hacks=allow_hacks, systems=systems)
     retried = False
     for i, game in enumerate(games):
         details = ra.get_game_details(game['ID'], ignore_error=True)
@@ -214,7 +240,8 @@ def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_
 def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, color: int) -> dict:
     desc = f"**System:** {game['ConsoleName']}\n"
     if details:
-        desc += f"**Developer:** {details['Developer']}\n**Publisher:** {details['Publisher']}\n**Genre:** {details['Genre']}\n**Released:** {details['Released']}\n"
+        for k in ['Developer', 'Publisher', 'Genre', 'Released']:
+            desc += f"**{k}:** {details[k]}\n"
     desc += f"**Achievements:** {game['NumAchievements']}"
 
     embed = {

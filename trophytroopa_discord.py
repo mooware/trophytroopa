@@ -52,7 +52,7 @@ class DiscordApi:
             'options': [
                 {
                     'name': 'count',
-                    'description': 'How many games to return (default: 1)',
+                    'description': 'How many games to return (1-10, default: 1)',
                     'type': 4, # INTEGER
                     'required': False,
                     'min_value': 1,
@@ -70,6 +70,12 @@ class DiscordApi:
                     'type': 5, # BOOLEAN
                     'required': False
                 },
+                {
+                    'name': 'systems',
+                    'description': 'Limit to one or more systems, use name substrings joined by comma ","',
+                    'type': 3, # STRING
+                    'required': False
+                }
             ]
         }
 
