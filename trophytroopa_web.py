@@ -155,15 +155,24 @@ def discord_interaction():
 
     req_type = request.json['type']
     if req_type == 1: # PING
-        return {'type': 1} # PONG
+        response = {'type': 1} # PONG
     elif req_type == 2: # APPLICATION_COMMAND
         cmd = request.json['data']
-        if cmd['name'] == 'trophygames':
-            return discord_cmd_trophygames(cmd)
-        else:
-            return abort(400, 'unknown command')
+        return discord_cmd(cmd)
     else:
         return abort(400, 'invalid interaction type')
+
+    if _VERBOSE:
+        print('discord response:', response)
+    return response
+
+@route('/trophytroopa/api/<cmd>')
+def api_interaction(cmd):
+    """Route for manual testing of discord slash commands."""
+    return discord_cmd({
+        'name': cmd,
+        'options': [{'name': k, 'value': v} for (k, v) in request.query.items()]
+    })
 
 def discord_verify(req):
     """Check the request signature as required by Discord for interactions."""
@@ -173,6 +182,12 @@ def discord_verify(req):
     discord = _get_discord_api()
     if not discord.verify_signature(data, signature, timestamp):
         abort(401, 'invalid request signature')
+
+def discord_cmd(cmd):
+    """Dispatch the discord slash commands."""
+    if cmd['name'] == 'trophygames':
+        return discord_cmd_trophygames(cmd)
+    return abort(400, 'unknown command')
 
 def discord_cmd_trophygames(cmd):
     """Process the discord /trophygames command."""
