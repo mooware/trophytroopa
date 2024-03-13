@@ -174,6 +174,28 @@ _mature_games = set([
     28643 # Tsukihime
 ])
 
+# make it easier to specify some systems for match_system()
+_SYSTEM_ALIAS = {
+    'gb': 'Game Boy',
+    'gbc': 'Game Boy Color',
+    'gba': 'Game Boy Advance',
+    'n64': 'Nintendo 64',
+    'nds': 'Nintendo DS',
+    'vb': 'Virtual Boy',
+    'ps1': 'PlayStation',
+    'psx': 'PlayStation',
+    'ps2': 'PlayStation 2',
+    'psp': 'PlayStation Portable',
+    'atari': 'Atari 2600',
+    'sms': 'Master System',
+    'gg': 'Game Gear',
+    'dc': 'Dreamcast',
+    'pce': 'PC Engine',
+    'pcecd': 'PC Engine CD',
+    'c64': 'Commodore 64',
+    'apple 2': 'Apple II',
+}
+
 class RetroAchievementsApi:
     """Discord API client for game lists and random games, caches the game lists locally."""
 
@@ -292,10 +314,13 @@ class RetroAchievementsApi:
 
     def match_system(self, substr: str):
         """return the system that is the closest match for the given substring"""
-        s = substr.strip().casefold()
+        s = substr.strip().lower()
         if not s:
             return None
-        matches = [x for x in self.get_systems() if s in x['Name'].casefold()]
+        alias = _SYSTEM_ALIAS.get(s)
+        if alias:
+            s = alias.lower()
+        matches = [x for x in self.get_systems() if s in x['Name'].lower()]
         if not matches:
             return None
         return min(matches, key=lambda x: len(x['Name']) - len(s))
