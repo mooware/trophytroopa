@@ -9,193 +9,6 @@ import random
 import time
 import re
 
-# adult games are part of the hub "Theme - Mature",
-# but I can't get that data over the API, so I manually scraped it from the website.
-# use this expression in the browser dev console on the mature hub:
-#   Array.from(document.querySelectorAll("table td.py-2 a"))
-#     .map(x => x.href.split("/")[4] + ", # " + x.parentElement.outerText.split("\n")[0]).join("\n")
-# scrape date: 2024-03-06
-_mature_games = set([
-    420, # Mario is a Drug Addict
-    1123, # Sex 2
-    1189, # Dragon Knight 4
-    1828, # Mechanized Attack
-    2429, # Sextris + Hentai Columns
-    2772, # Grand Theft Auto: San Andreas
-    2814, # Dragon Knight 4
-    3099, # Dragon Knight 4
-    3191, # Jackass: The Game
-    4132, # Mega Cheril Perils
-    4414, # Rings of Power
-    4542, # Bubble Bath Babes
-    4551, # Gotta Protectors: Amazon's Running Diet
-    4565, # Peek-A-Boo Poker
-    4569, # Hot Slots
-    4851, # Lala the Magical
-    5256, # Yun
-    5576, # Erika to Satoru no Yume Bouken
-    5612, # Guitar Hero II: Deluxe
-    5629, # Hong Kong 97 | Hong Kong 1997
-    5774, # Papillon Gals
-    6235, # Yakyuuken Part II: Gal's Dungeon (FDS)
-    6310, # Color Some Shit
-    6699, # Sex
-    6926, # Nanako Descends to Hell
-    6943, # BMX XXX
-    6966, # Daraku no Kuni no Angie: Kyokai no Mesudoreitachi
-    6976, # YoukaiDen
-    6978, # 177
-    6996, # YU-NO: Kono Yo no Hate de Koi o Utau Shojo
-    6999, # Necronomicon
-    7098, # Advanced V.G.
-    7241, # Cheril in the Cave
-    7388, # Strip Fighter II
-    7476, # Mojon Twins Gran Sabiduría: 31 in 1 Real Game
-    7555, # Private Stripper
-    7565, # Hanafuda Yuukyou Den: Nagarebana Oryuu
-    7763, # Sailor Fuku Bishoujo Zukan (FDS)
-    8072, # Cheril the Goddess
-    8560, # Steam Heart's
-    8642, # Super Wakana Land
-    8926, # Terrifying 911 | Special Forces 2: Base | Metal Slug
-    9565, # Lady Sword: Ryakudatsusareta 10-nin no Otome
-    9786, # Welcome to Pia Carrot
-    9797, # 2nd Space
-    9972, # Honey Peach: Mei Nv Quan
-    10802, # 2nd Space
-    10961, # Shadow Warrior
-    11110, # Harlem Blade: The Greatest of All Time
-    11111, # L Elle
-    11566, # Grand Theft Auto: San Andreas
-    11575, # Pokemon Clover
-    11892, # Pipi & Bibis (Whoopee!!)
-    12134, # Frisky Tom
-    12197, # Lover Boy | Triki Triki
-    12203, # Streaking
-    12722, # Custer's Revenge
-    13263, # Block Gal
-    13379, # Divine Sealing
-    13437, # LSD: Dream Emulator
-    13566, # Pachinko Sexy Reaction
-    13567, # Pachinko Sexy Reaction 2
-    13743, # Joshi Daisei Private
-    13787, # Super Jack
-    13792, # Bootèe | Bootee
-    13935, # Leisure Suit Larry in the Land of the Lounge Lizards
-    13989, # Cyberblock Metal Orange
-    14041, # Gabrielle
-    14107, # Emmy
-    14319, # Sexy Invaders (FDS)
-    14753, # Super Maruo
-    14759, # Beat 'Em & Eat 'Em
-    14956, # My Best Friends: St. Andrew Jogakuin-hen
-    15344, # Ultimate Sliding Puzzle: Ecchi Pack
-    15349, # Jig-A-Pix: Love Is...
-    15787, # Gals Panic S: Extra Edition
-    15788, # Gals Panic S2 | Gals Panic SU
-    15789, # Gals Panic S3
-    15960, # Legend of Iowa, The
-    15996, # Wild Woody
-    16204, # Fantasia
-    16222, # Pokemon Grand Dad Version
-    16238, # Panic in the Mushroom Kingdom
-    16243, # Panic in the Mushroom Kingdom 2
-    16397, # Plumbers Don't Wear Ties
-    16467, # Tokimeki Card Paradise: Koi no Royal Straight Flush
-    16550, # Mind Teazzer
-    16638, # Touhoumon Insane Version
-    16840, # NeuroDancer: Journey into the Neuronet!
-    16940, # Burning Desire
-    17115, # AV Bishoujo Senshi Girl Fighting | AV Pretty Girl Fighting
-    17308, # Sex
-    17400, # Yellow Lemon
-    17458, # Gals Panic
-    17459, # Gals Panic 3
-    17460, # Gals Panic 4
-    17483, # Battle Skin Panic
-    17703, # Larry and the Long Look for a Luscious Lover
-    18123, # Advanced V.G.
-    18165, # V I T A L I T Y
-    18237, # Serial Experiments Lain
-    18261, # Germs: Nerawareta Machi
-    18466, # Girthbound
-    18630, # Doki Doki Majo Shinpan!
-    18631, # Doki Doki Majo Shinpan 2: Duo
-    18632, # Doki Majo Plus
-    18644, # Hi-Leg Fantasy
-    19093, # 7 Sins
-    19220, # Leisure Suit Larry: Magna Cum Laude
-    19440, # Jackass: The Game
-    19705, # BMX XXX
-    19716, # Super Uwol
-    19743, # Gun
-    20085, # Junkoid
-    20240, # Pornoman
-    20264, # Yakyuuken Special, The: Kon'ya wa 12-kaisen!!
-    20265, # Yakyuuken Special, The: Kon'ya wa 8-kaisen!!
-    20266, # Yakyuuken Special, The: Kon'ya wa 12-kaisen!!
-    20295, # PhantasM | Phantasmagoria
-    20506, # Onee-san to Issho! Janken Paradise
-    20507, # Onee-san to Issho! Kisekae Paradise
-    20953, # Family Guy: Video Game!
-    21056, # Playboy: The Mansion
-    21294, # Penthouse Interactive: Virtual Photo Shoot Vol. 1
-    21535, # _Summer##
-    21542, # 120 Yen no Haru: 120 Yen Stories
-    21935, # Dragon Knight
-    22063, # Dragon Knight II
-    22065, # Dragon Knight & Graffiti
-    22081, # Dragon Knight II
-    22084, # Macadam: Futari Yogari
-    22134, # Simple 2000 Series Ultimate Vol. 15: Love * Ping Pong! | Pink Pong
-    22685, # Cheril Perils Classic
-    22821, # Simple 2000 Series Vol. 88: The Mini Bijo Keikan
-    23799, # Yu-Gi-Oh! Forbidden Memories: Deep Fried Mod
-    23922, # Oh No!
-    24046, # Guitar Hero II: Deluxe
-    24119, # Mega Casanova
-    24120, # Mega Casanova 2
-    24121, # Mega Casanova 3
-    24123, # Hong Kong 97
-    24823, # Fairy Pinball: Yousei Tachi no Pinball (FDS)
-    24959, # Chiller
-    24994, # La Culotte de Zelda
-    25045, # Glass
-    25068, # SnakeDS
-    25167, # Guitar Hero II: Deluxe - Brand New Hero
-    25191, # Torrente 3: The Protector | Torrente 3: El Protector
-    25300, # He Fucked the Girl Out of Me.
-    25612, # Super Junkoid
-    25727, # Advanced V.G.
-    25816, # Shampoo
-    26150, # Ikki Tousen: Shining Dragon
-    27322, # Batty Zabella
-    28557, # Shuten Douji
-    28643 # Tsukihime
-])
-
-# make it easier to specify some systems for match_system()
-_SYSTEM_ALIAS = {
-    'gb': 'Game Boy',
-    'gbc': 'Game Boy Color',
-    'gba': 'Game Boy Advance',
-    'n64': 'Nintendo 64',
-    'nds': 'Nintendo DS',
-    'vb': 'Virtual Boy',
-    'ps1': 'PlayStation',
-    'psx': 'PlayStation',
-    'ps2': 'PlayStation 2',
-    'psp': 'PlayStation Portable',
-    'atari': 'Atari 2600',
-    'sms': 'Master System',
-    'gg': 'Game Gear',
-    'dc': 'Dreamcast',
-    'pce': 'PC Engine',
-    'pcecd': 'PC Engine CD',
-    'c64': 'Commodore 64',
-    'apple 2': 'Apple II',
-}
-
 class RetroAchievementsApi:
     """Discord API client for game lists and random games, caches the game lists locally."""
 
@@ -211,6 +24,17 @@ class RetroAchievementsApi:
         self.all_games = None
         self.all_nonempty_games = None
         self.db_timestamp = 0
+        # some short well-known aliases to make system filtering easier
+        with open('system_aliases.json', 'rb') as f:
+            self.system_aliases = json.load(f)
+        # adult games are part of the hub "Theme - Mature",
+        # but I can't get that data over the API, so I manually scraped it from the website.
+        # use this expression in the browser dev console on the mature hub:
+        #   Array.from(document.querySelectorAll("table td.py-2 a"))
+        #     .map(x => '"' + x.href.split("/")[4] + "\": \"" + x.parentElement.outerText.split("\n")[0].trim() + "\"").join(",\n")
+        # scrape date: 2024-03-06
+        with open('mature_games.json', 'rb') as f:
+            self.mature_games = {int(x) for x in json.load(f)}
 
     def _load_db(self):
         path = os.path.join(self.cache_dir, 'systems.json')
@@ -235,7 +59,7 @@ class RetroAchievementsApi:
                 self.all_games.append(game)
 
     def _is_ignored_game(self, game: dict):
-        if game['ID'] in _mature_games:
+        if game['ID'] in self.mature_games:
             return True
         # subsets are additional groups of achievements for a game, usually specialized
         title = game['Title']
@@ -317,7 +141,7 @@ class RetroAchievementsApi:
         s = substr.strip().lower()
         if not s:
             return None
-        alias = _SYSTEM_ALIAS.get(s)
+        alias = self.system_aliases.get(s)
         if alias:
             s = alias.lower()
         matches = [x for x in self.get_systems() if s in x['Name'].lower()]
