@@ -2,6 +2,8 @@
 
 import urllib.request
 import urllib.error
+from datetime import datetime
+import shutil
 import sys
 import os
 import json
@@ -191,10 +193,19 @@ class RetroAchievementsApi:
             all_nonempty += is_nonempty
         return result, (all_total, all_nonempty)
 
+    def get_update_timestamp(self):
+        """Get an ISO date and time string for when the db cache was updated."""
+        path = os.path.join(self.cache_dir, 'systems.json')
+        if os.path.exists(path):
+            mtime = os.stat(path).st_mtime
+            dt = datetime.fromtimestamp(mtime)
+            return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        return None
+
     def update_cache(self):
         """Download the cached database files again and replace the old database."""
-        temp_cache_dir = self.cache_dir + '.update'
-        new_db = RetroAchievementsApi(self.auth_user, self.auth_key, temp_cache_dir)
+        update_dir = self.cache_dir + '.update'
+        new_db = RetroAchievementsApi(self.auth_user, self.auth_key, update_dir)
         systems = new_db.get_systems()
         for system in systems:
             games = new_db.get_gamelist(system['ID'])
@@ -203,8 +214,11 @@ class RetroAchievementsApi:
             time.sleep(1)
         new_db._load_db()
         print('total', len(new_db.all_games), 'games,', len(new_db.all_nonempty_games), 'with achievements')
-        # now replace the old data
-        os.replace(temp_cache_dir, self.cache_dir)
+        # now replace the old data (apparently you can't atomically replace it easily)
+        old_dir = self.cache_dir + '.old'
+        os.rename(self.cache_dir, old_dir)
+        os.rename(update_dir, self.cache_dir)
+        shutil.rmtree(old_dir)
         self.all_games = new_db.all_games
         self.all_nonempty_games = new_db.all_nonempty_games
 

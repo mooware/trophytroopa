@@ -21,6 +21,9 @@ HTML_INDEX_TEMPLATE = """
     <h1>TrophyTroopa Random Games Bot</h1>
     <div>games with achievements: {{len(ra.get_full_gamelist(allow_empty=False))}}</div>
     <div>total games: {{len(ra.get_full_gamelist(allow_empty=True))}}</div>
+%if timestamp:
+    <div>last updated at: {{timestamp}}</div>
+%end
     <div><a href="random">go here for a random game with achievements</a></div>
     <div><a href="any">go here for any random game</a></div>
     <div><a href="stats">game list stats</a></div>
@@ -116,7 +119,8 @@ def redirect_to_index():
 @route('/trophytroopa/')
 def index():
     ra = _get_ra_api()
-    return template(HTML_INDEX_TEMPLATE, ra=ra)
+    ts = ra.get_update_timestamp()
+    return template(HTML_INDEX_TEMPLATE, ra=ra, timestamp=ts)
 
 @route('/trophytroopa/tos')
 def tos():
