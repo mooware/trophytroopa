@@ -66,7 +66,7 @@ class DiscordApi:
                 },
                 {
                     'name': 'hacks',
-                    'description': 'Allow romhacks? (default: true)',
+                    'description': 'Allow romhacks? (default: false)',
                     'type': 5, # BOOLEAN
                     'required': False
                 },

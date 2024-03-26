@@ -200,7 +200,7 @@ def discord_cmd_trophygames(cmd):
         opts = {opt['name']: opt['value'] for opt in cmd['options']}
     game_count = int(opts.get('count', 1))
     allow_empty = bool(opts.get('empty', False))
-    allow_hacks = bool(opts.get('hacks', True))
+    allow_hacks = bool(opts.get('hacks', False))
     filter_systems = opts.get('systems')
     ra = _get_ra_api()
     try:
