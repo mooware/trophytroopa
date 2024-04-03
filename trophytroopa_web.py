@@ -2,6 +2,8 @@
 
 import os
 import time
+import random
+import re
 from bottle import route, post, request, template, redirect, abort, run
 import trophytroopa_discord
 import ra_api
@@ -92,6 +94,8 @@ HTML_STATS_TEMPLATE = """
 """
 
 _RA = None
+
+
 def _get_ra_api():
     global _RA
     if not _RA:
@@ -100,15 +104,20 @@ def _get_ra_api():
         _RA.get_full_gamelist()
     return _RA
 
+
 _DISCORD = None
+
+
 def _get_discord_api():
     global _DISCORD
     if not _DISCORD:
         _DISCORD = trophytroopa_discord.get_api()
     return _DISCORD
 
+
 # flag for printing debug output
 _VERBOSE = "VERBOSE" in os.environ
+
 
 @route('/trophytroopa')
 @route('/')
@@ -116,33 +125,40 @@ def redirect_to_index():
     # we need trailing slash for relative urls
     return redirect('/trophytroopa/')
 
+
 @route('/trophytroopa/')
 def index():
     ra = _get_ra_api()
     ts = ra.get_update_timestamp()
     return template(HTML_INDEX_TEMPLATE, ra=ra, timestamp=ts)
 
+
 @route('/trophytroopa/tos')
 def tos():
     return template(HTML_TOS_TEMPLATE)
+
 
 @route('/trophytroopa/privacy')
 def privacy():
     return template(HTML_PRIVACY_TEMPLATE)
 
+
 @route('/trophytroopa/random')
 def random_game_pull():
     return show_random_game(allow_empty=False)
 
+
 @route('/trophytroopa/any')
 def any_game_pull():
     return show_random_game(allow_empty=True)
+
 
 def show_random_game(allow_empty: bool):
     ra = _get_ra_api()
     game = ra.get_random_games(1, allow_empty=allow_empty)[0]
     details = ra.get_game_details(game['ID'], ignore_error=True)
     return template(HTML_GAME_TEMPLATE, ra=ra, game=game, details=details)
+
 
 @route('/trophytroopa/stats')
 def stats():
@@ -151,6 +167,7 @@ def stats():
     table = sorted(table.items(), key=lambda row: (row[1][1], row[1][0]), reverse=True)
     return template(HTML_STATS_TEMPLATE, stats=table, total=total, nonempty=nonempty)
 
+
 @post('/trophytroopa/discord_interaction')
 def discord_interaction():
     if _VERBOSE:
@@ -158,9 +175,9 @@ def discord_interaction():
     discord_verify(request)
 
     req_type = request.json['type']
-    if req_type == 1: # PING
-        response = {'type': 1} # PONG
-    elif req_type == 2: # APPLICATION_COMMAND
+    if req_type == 1:  # PING
+        response = {'type': 1}  # PONG
+    elif req_type == 2:  # APPLICATION_COMMAND
         cmd = request.json['data']
         return discord_cmd(cmd)
     else:
@@ -170,6 +187,7 @@ def discord_interaction():
         print('discord response:', response)
     return response
 
+
 @route('/trophytroopa/api/<cmd>')
 def api_interaction(cmd):
     """Route for manual testing of discord slash commands."""
@@ -177,6 +195,7 @@ def api_interaction(cmd):
         'name': cmd,
         'options': [{'name': k, 'value': v} for (k, v) in request.query.items()]
     })
+
 
 def discord_verify(req):
     """Check the request signature as required by Discord for interactions."""
@@ -187,11 +206,39 @@ def discord_verify(req):
     if not discord.verify_signature(data, signature, timestamp):
         abort(401, 'invalid request signature')
 
+
 def discord_cmd(cmd):
     """Dispatch the discord slash commands."""
     if cmd['name'] == 'trophygames':
         return discord_cmd_trophygames(cmd)
+    elif cmd['name'] == 'random':
+        return discord_cmd_random(cmd)
     return abort(400, 'unknown command')
+
+
+def discord_cmd_random(cmd):
+    """Process the discord /random command."""
+    opts = {}
+    if 'options' in cmd:
+        opts = {opt['name']: opt['value'] for opt in cmd['options']}
+    number_range = int(opts.get('range', 0))
+    choices = opts.get('choice')
+    if number_range:
+        num = random.randint(1, number_range)
+        return make_discord_response(f'Random number between 1 and {number_range}: `{num}`')
+    elif choices:
+        clean_choices = [s.strip() for s in choices.split(',') if s.strip()]
+        if len(clean_choices) < 2:
+            return make_discord_response(f'Not enough choices given {_CONCERNED_EMOTE}')
+        choice = random.choice(clean_choices)
+        return make_discord_response(f'Random choice: `{escape_markdown(choice)}`')
+    else:
+        coinflip = random.randint(0, 1)
+        if coinflip:
+            return make_discord_response("Coinflip: Heads / Your choice")
+        else:
+            return make_discord_response("Coinflip: Tails / Opponent's choice")
+
 
 def discord_cmd_trophygames(cmd):
     """Process the discord /trophygames command."""
@@ -229,14 +276,16 @@ def discord_cmd_trophygames(cmd):
     except Exception as ex:
         return make_discord_response(f'Pull failed {_CONCERNED_EMOTE}: {ex}')
 
+
 def make_discord_response(text, embeds=None):
     response = {
-        'type': 4, # CHANNEL_MESSAGE_WITH_SOURCE
-        'data': { 'content': text }
+        'type': 4,  # CHANNEL_MESSAGE_WITH_SOURCE
+        'data': {'content': text}
     }
     if embeds:
         response['data']['embeds'] = embeds
     return response
+
 
 def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_empty: bool, allow_hacks: bool, systems: list) -> dict:
     embeds = []
@@ -255,6 +304,7 @@ def make_discord_embeds(ra: ra_api.RetroAchievementsApi, game_count: int, allow_
         embed = make_game_embed(ra, game, details, color)
         embeds.append(embed)
     return embeds
+
 
 def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, color: int) -> dict:
     desc = f"**System:** {game['ConsoleName']}\n"
@@ -280,6 +330,13 @@ def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, 
         }
 
     return embed
+
+
+def escape_markdown(text):
+    """Escape control characters in markdown text."""
+    bad_chars = '\\`*_{}[]<>()#+-.!|'
+    return re.sub(re.escape(bad_chars), '\\\1', text)
+
 
 if __name__ == '__main__':
     run(host='localhost', port=8080, debug=True)

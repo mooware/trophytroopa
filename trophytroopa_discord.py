@@ -45,7 +45,7 @@ class DiscordApi:
         guild_part = f'/guilds/{guild}' if guild else ''
         url = _DISCORD_API_URL + f'applications/{self.app_id}{guild_part}/commands'
 
-        cmds = {
+        cmdlist = [{
             'name': 'trophygames',
             'type': 1, # CHAT_INPUT
             'description': 'Get random games from the RetroAchievements database',
@@ -77,9 +77,29 @@ class DiscordApi:
                     'required': False
                 }
             ]
-        }
+        },
+        {
+            'name': 'random',
+            'type': 1, # CHAT_INPUT
+            'description': 'Get a coin flip, random number or random choice',
+            'options': [
+                {
+                    'name': 'range',
+                    'description': 'Inclusive upper bound of the number range (starts from 1)',
+                    'type': 4, # INTEGER
+                    'required': False,
+                    'min_value': 2
+                },
+                {
+                    'name': 'choice',
+                    'description': 'Comma-separated list of choices',
+                    'type': 3, # STRING
+                    'required': False
+                }
+            ]
+        }]
 
-        return self._send_request(url, data=cmds)
+        return [self._send_request(url, data=cmd) for cmd in cmdlist]
 
     def list_guilds(self):
         """Request a list of guilds in which the bot is a member."""
