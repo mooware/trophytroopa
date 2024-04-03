@@ -209,18 +209,18 @@ def discord_verify(req):
 
 def discord_cmd(cmd):
     """Dispatch the discord slash commands."""
-    if cmd['name'] == 'trophygames':
-        return discord_cmd_trophygames(cmd)
-    elif cmd['name'] == 'random':
-        return discord_cmd_random(cmd)
-    return abort(400, 'unknown command')
-
-
-def discord_cmd_random(cmd):
-    """Process the discord /random command."""
     opts = {}
     if 'options' in cmd:
         opts = {opt['name']: opt['value'] for opt in cmd['options']}
+    if cmd['name'] == 'trophygames':
+        return discord_cmd_trophygames(opts)
+    elif cmd['name'] == 'random':
+        return discord_cmd_random(opts)
+    return abort(400, 'unknown command')
+
+
+def discord_cmd_random(opts):
+    """Process the discord /random command."""
     number_range = int(opts.get('range', 0))
     choices = opts.get('choice')
     if number_range:
@@ -240,11 +240,8 @@ def discord_cmd_random(cmd):
             return make_discord_response("Coinflip: Tails / Opponent's choice")
 
 
-def discord_cmd_trophygames(cmd):
+def discord_cmd_trophygames(opts):
     """Process the discord /trophygames command."""
-    opts = {}
-    if 'options' in cmd:
-        opts = {opt['name']: opt['value'] for opt in cmd['options']}
     game_count = int(opts.get('count', 1))
     allow_empty = bool(opts.get('empty', False))
     allow_hacks = bool(opts.get('hacks', False))
