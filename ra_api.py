@@ -34,7 +34,7 @@ class RetroAchievementsApi:
         # use this expression in the browser dev console on the mature hub:
         #   Array.from(document.querySelectorAll("table td.py-2 a"))
         #     .map(x => '"' + x.href.split("/")[4] + "\": \"" + x.parentElement.outerText.split("\n")[0].trim() + "\"").join(",\n")
-        # scrape date: 2024-03-06
+        # scrape date: 2024-04-03
         with open('mature_games.json', 'rb') as f:
             self.mature_games = {int(x) for x in json.load(f)}
 
