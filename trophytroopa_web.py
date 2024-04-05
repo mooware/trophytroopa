@@ -231,7 +231,7 @@ def discord_cmd_random(opts):
         if len(clean_choices) < 2:
             return make_discord_response(f'Not enough choices given {_CONCERNED_EMOTE}')
         choice = random.choice(clean_choices)
-        return make_discord_response(f'Random choice: `{escape_markdown(choice)}`')
+        return make_discord_response(f'Random choice from {markdown_format_code(choices)}: {markdown_format_code(choice)}')
     else:
         coinflip = random.randint(0, 1)
         if coinflip:
@@ -329,10 +329,15 @@ def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, 
     return embed
 
 
-def escape_markdown(text):
-    """Escape control characters in markdown text."""
-    bad_chars = '\\`*_{}[]<>()#+-.!|'
-    return re.sub(re.escape(bad_chars), '\\\1', text)
+def markdown_format_code(text):
+    """Turn the given text into a markdown inline code block."""
+    filtered = ''
+    for c in text:
+        if c == '`':
+            filtered += "'"
+        elif c >= ' ':
+            filtered += c
+    return '`' + filtered + '`'
 
 
 if __name__ == '__main__':
