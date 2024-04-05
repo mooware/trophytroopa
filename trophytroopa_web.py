@@ -225,19 +225,19 @@ def discord_cmd_random(opts):
     choices = opts.get('choice')
     if number_range:
         num = random.randint(1, number_range)
-        return make_discord_response(f'Random number between 1 and {number_range}: `{num}`')
+        return make_discord_response(f'Random number between 1 and {number_range} is: `{num}`')
     elif choices:
         clean_choices = [s.strip() for s in choices.split(',') if s.strip()]
         if len(clean_choices) < 2:
             return make_discord_response(f'Not enough choices given {_CONCERNED_EMOTE}')
         choice = random.choice(clean_choices)
-        return make_discord_response(f'Random choice from {markdown_format_code(choices)}: {markdown_format_code(choice)}')
+        return make_discord_response(f'Random choice from {markdown_format_code(choices)} is: {markdown_format_code(choice)}')
     else:
         coinflip = random.randint(0, 1)
         if coinflip:
-            return make_discord_response("Coinflip: Heads / Your choice")
+            return make_discord_response("Coinflip is: Heads / Your choice")
         else:
-            return make_discord_response("Coinflip: Tails / Opponent's choice")
+            return make_discord_response("Coinflip is: Tails / Opponent's choice")
 
 
 def discord_cmd_trophygames(opts):
