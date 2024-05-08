@@ -3,13 +3,14 @@
 import os
 import time
 import random
-import re
 from bottle import route, post, request, template, redirect, abort, run
 import trophytroopa_discord
 import ra_api
+import flashpoint_db_api
 
 # use the two primary RetroAchievements colors to mark the embeds
 _DISCORD_EMBED_COLORS = [0x1066dd, 0xcc9a00]
+_JOLLY_EMBED_COLOR = 0xf9cf00
 # unicode codepoints for cross and checkmark, representing false/true
 _BOOL_EMOTE = ['\u274C', '\u2705']
 _CONCERNED_EMOTE = '\U0001F622'
@@ -94,6 +95,8 @@ HTML_STATS_TEMPLATE = """
 """
 
 _RA = None
+_DISCORD = None
+_GAMES2JOLLY = None
 
 
 def _get_ra_api():
@@ -105,14 +108,18 @@ def _get_ra_api():
     return _RA
 
 
-_DISCORD = None
-
-
 def _get_discord_api():
     global _DISCORD
     if not _DISCORD:
         _DISCORD = trophytroopa_discord.get_api()
     return _DISCORD
+
+
+def _get_jolly_api():
+    global _GAMES2JOLLY
+    if not _GAMES2JOLLY:
+        _GAMES2JOLLY = flashpoint_db_api.get_api('games2jolly', 'developer=games2jolly')
+    return _GAMES2JOLLY
 
 
 # flag for printing debug output
@@ -214,6 +221,8 @@ def discord_cmd(cmd):
         opts = {opt['name']: opt['value'] for opt in cmd['options']}
     if cmd['name'] == 'trophygames':
         return discord_cmd_trophygames(opts)
+    elif cmd['name'] == 'jollymania':
+        return discord_cmd_jollymania(opts)
     elif cmd['name'] == 'random':
         return discord_cmd_random(opts)
     return abort(400, 'unknown command')
@@ -238,6 +247,18 @@ def discord_cmd_random(opts):
             return make_discord_response("Coinflip is: Heads / Your choice")
         else:
             return make_discord_response("Coinflip is: Tails / Opponent's choice")
+
+
+def discord_cmd_jollymania(opts):
+    """Process the discord /jollymania command."""
+    api = _get_jolly_api()
+    try:
+        game = api.get_random_game()
+        embed = make_jolly_embed(api, game, _JOLLY_EMBED_COLOR)
+        return make_discord_response('', embeds=[embed])
+    except Exception as ex:
+        return make_discord_response(f'Pull failed {_CONCERNED_EMOTE}: {ex}')
+
 
 
 def discord_cmd_trophygames(opts):
@@ -325,6 +346,21 @@ def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, 
         embed['image'] = {
             'url': ra.make_full_url(details['ImageIngame'])
         }
+
+    return embed
+
+
+def make_jolly_embed(api: flashpoint_db_api.FlashpointDbApi, game: dict, color: int) -> dict:
+    embed = {
+        'type': 'rich',
+        'title': game['title'],
+        'description': f"**Platform:** {game['platform']}",
+        'color': color,
+        'image': {
+            'url': api.make_logo_url(game['id'])
+        },
+        'url': api.make_db_url(game['id'])
+    }
 
     return embed
 

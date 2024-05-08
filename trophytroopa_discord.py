@@ -79,6 +79,11 @@ class DiscordApi:
             ]
         },
         {
+            'name': 'jollymania',
+            'type': 1, # CHAT_INPUT
+            'description': 'Get a random Games2Jolly game from the Flashpoint database',
+        },
+        {
             'name': 'random',
             'type': 1, # CHAT_INPUT
             'description': 'Get a coin flip, random number or random choice',

@@ -1,7 +1,5 @@
 """Discord API client for game lists and random games, caches the game lists locally."""
 
-import urllib.request
-import urllib.error
 from datetime import datetime
 import shutil
 import sys
@@ -10,6 +8,7 @@ import json
 import random
 import time
 import re
+import httputil
 
 class RetroAchievementsApi:
     """Discord API client for game lists and random games, caches the game lists locally."""
@@ -69,28 +68,13 @@ class RetroAchievementsApi:
             return True
         return False
 
-    def _request(self, url: str, args=None, cache_path=None):
+    def _request(self, url: str, args=None, cache_path=None, ignore_error=False):
         full_url = self._API_URL + url + f'?z={self.auth_user}&y={self.auth_key}'
         if args:
             full_url += '&'
             full_url += args
-        if cache_path:
-            full_cache_path = os.path.join(self.cache_dir, cache_path)
-        json_resp = None
-        if not cache_path or not os.path.exists(full_cache_path):
-            req = urllib.request.Request(full_url)
-            req.add_header("User-Agent", "TrophyTroopa")
-            json_resp = urllib.request.urlopen(req).read()
-            if cache_path:
-                os.makedirs(os.path.dirname(full_cache_path), exist_ok=True)
-                with open(full_cache_path, 'wb') as f:
-                    f.write(json_resp)
-
-        if not json_resp:
-            with open(full_cache_path, 'rb') as f:
-                json_resp = f.read()
-
-        return json.loads(json_resp)
+        full_cache_path = os.path.join(self.cache_dir, cache_path) if cache_path else None
+        return httputil.cached_request(full_url, full_cache_path, ignore_error=ignore_error)
 
     def get_systems(self):
         """get the list of known systems"""
@@ -103,14 +87,10 @@ class RetroAchievementsApi:
         # will also return games without achievements
         return self._request('API_GetGameList.php', f'i={sysid}', cache_path=cache_path)
 
-    def get_game_details(self, game_id: int, ignore_error=False):
+    def get_game_details(self, game_id: int):
         """get details for a game, will not be cached"""
         gid = int(game_id)
-        try:
-            return self._request('API_GetGame.php', f'i={gid}')
-        except urllib.error.HTTPError:
-            if not ignore_error:
-                raise
+        return self._request('API_GetGame.php', f'i={gid}', ignore_error=True)
 
     def get_full_gamelist(self, allow_empty=False) -> list:
         """get the full list of games with achievements, or of any games if allow_empty=True"""
