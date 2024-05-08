@@ -87,10 +87,10 @@ class RetroAchievementsApi:
         # will also return games without achievements
         return self._request('API_GetGameList.php', f'i={sysid}', cache_path=cache_path)
 
-    def get_game_details(self, game_id: int):
+    def get_game_details(self, game_id: int, ignore_error=False):
         """get details for a game, will not be cached"""
         gid = int(game_id)
-        return self._request('API_GetGame.php', f'i={gid}', ignore_error=True)
+        return self._request('API_GetGame.php', f'i={gid}', ignore_error=ignore_error)
 
     def get_full_gamelist(self, allow_empty=False) -> list:
         """get the full list of games with achievements, or of any games if allow_empty=True"""
