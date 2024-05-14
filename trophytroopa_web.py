@@ -254,8 +254,8 @@ def discord_cmd_jollymania(opts):
     api = _get_jolly_api()
     try:
         game = api.get_random_game()
-        embed = make_jolly_embed(api, game, _JOLLY_EMBED_COLOR)
-        return make_discord_response('', embeds=[embed])
+        embeds = make_jolly_embeds(api, game, _JOLLY_EMBED_COLOR)
+        return make_discord_response('', embeds=embeds)
     except Exception as ex:
         return make_discord_response(f'Pull failed {_CONCERNED_EMOTE}: {ex}')
 
@@ -350,8 +350,8 @@ def make_game_embed(ra: ra_api.RetroAchievementsApi, game: dict, details: dict, 
     return embed
 
 
-def make_jolly_embed(api: flashpoint_db_api.FlashpointDbApi, game: dict, color: int) -> dict:
-    embed = {
+def make_jolly_embeds(api: flashpoint_db_api.FlashpointDbApi, game: dict, color: int) -> dict:
+    embed = [{
         'type': 'rich',
         'title': game['title'],
         'description': f"**Platform:** {game['platform']}",
@@ -360,7 +360,14 @@ def make_jolly_embed(api: flashpoint_db_api.FlashpointDbApi, game: dict, color: 
             'url': api.make_logo_url(game['id'])
         },
         'url': api.make_db_url(game['id'])
-    }
+    },
+    {
+        'type': 'rich',
+        'color': color,
+        'image': {
+            'url': api.make_screenshot_url(game['id'])
+        }
+    }]
 
     return embed
 
