@@ -58,7 +58,7 @@ class FlashpointDbApi:
 
 def get_api(name, query_filter):
     """Create a new FlashpointDbApi instance."""
-    return FlashpointDbApi(name, query_filter, 'db')
+    return FlashpointDbApi(name, query_filter, 'flashpointdb')
 
 def main():
     """main entry point if script is called directly."""
